@@ -1,0 +1,10 @@
+python-dotenv
+langchain
+langchain-groq
+langchain-community
+pandas
+PyPDF2
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
