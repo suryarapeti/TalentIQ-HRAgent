@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TalentIQ - HR AI Agent</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+      }
+      .loader {
+        border: 4px solid #f3f3f3;
+        border-radius: 50%;
+        border-top: 4px solid #3b82f6;
+        width: 40px;
+        height: 40px;
+        animation: spin 2s linear infinite;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+      .card-hover:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 text-gray-800">
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+      <header class="text-center mb-10">
+        <h1 class="text-4xl font-bold text-gray-900 mb-2">TalentIQ</h1>
+        <p class="text-lg text-gray-600">
+          Automate your hiring workflow from screening to scheduling
+        </p>
+      </header>
+
+      <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Left Panel: Job & Resume Upload -->
+        <div class="bg-white p-6 rounded-lg shadow-md card-hover">
+          <h2 class="text-2xl font-semibold mb-4 text-gray-900">
+            📋 Job & Resumes
+          </h2>
+
+          <div class="mb-6">
+            <label
+              for="job-description"
+              class="block text-sm font-medium text-gray-700 mb-2"
+              >Job Description *</label
+            >
+            <textarea
+              id="job-description"
+              rows="8"
+              class="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition resize-none"
+              placeholder="Paste the complete job description here including requirements, responsibilities, and qualifications..."
+            ></textarea>
+          </div>
+
+          <div class="mb-6">
+            <label
+              for="resume-upload"
+              class="block text-sm font-medium text-gray-700 mb-2"
+              >Upload Resumes *</label
+            >
+            <input
+              type="file"
+              id="resume-upload"
+              multiple
+              class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
+              accept=".pdf"
+            />
+            <p class="text-xs text-gray-500 mt-1">
+              Upload one or more PDF resumes (max 10MB each)
+            </p>
+            <div id="file-list" class="mt-2 space-y-1"></div>
+          </div>
+
+          <div class="text-center">
+            <button
+              id="process-button"
+              class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300 ease-in-out transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+            >
+              🤖 Screen & Rank Candidates
+            </button>
+          </div>
+        </div>
+
+        <!-- Right Panel: Results -->
+        <div class="bg-white p-6 rounded-lg shadow-md">
+          <h2 class="text-2xl font-semibold mb-4 text-gray-900">
+            📊 Candidate Review & Scheduling
+          </h2>
+
+          <!-- Loading State -->
+          <div
+            id="loader"
+            class="hidden flex justify-center items-center py-16"
+          >
+            <div class="loader"></div>
+            <p class="ml-4 text-gray-600">Analyzing candidates with AI...</p>
+          </div>
+
+          <!-- Results Container -->
+          <div id="candidate-review-panel" class="space-y-4">
+            <div class="text-center text-gray-500 py-16">
+              <div class="text-6xl mb-4">🎯</div>
+              <p class="text-lg">
+                Ranked candidates will appear here after processing
+              </p>
+              <p class="text-sm mt-2">
+                Upload resumes and job description to get started
+              </p>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      <!-- Processing Status -->
+      <div
+        id="processing-status"
+        class="hidden mt-6 bg-blue-50 border-l-4 border-blue-400 p-4 rounded"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <div class="text-blue-400">ℹ️</div>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-blue-700" id="status-message">
+              Processing your request...
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal -->
+    <div
+      id="message-modal"
+      class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50"
+    >
+      <div
+        class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white"
+      >
+        <div class="mt-3 text-center">
+          <h3
+            class="text-lg leading-6 font-medium text-gray-900"
+            id="modal-title"
+          ></h3>
+          <div class="mt-2 px-7 py-3">
+            <p class="text-sm text-gray-500" id="modal-message"></p>
+          </div>
+          <div class="items-center px-4 py-3">
+            <button
+              id="modal-close"
+              class="px-4 py-2 bg-blue-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-300 transition"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const processButton = document.getElementById("process-button");
+        const jobDescription = document.getElementById("job-description");
+        const resumeUpload = document.getElementById("resume-upload");
+        const candidateReviewPanel = document.getElementById(
+          "candidate-review-panel"
+        );
+        const loader = document.getElementById("loader");
+        const fileList = document.getElementById("file-list");
+        const processingStatus = document.getElementById("processing-status");
+        const statusMessage = document.getElementById("status-message");
+
+        const messageModal = document.getElementById("message-modal");
+        const modalTitle = document.getElementById("modal-title");
+        const modalMessage = document.getElementById("modal-message");
+        const modalClose = document.getElementById("modal-close");
+
+        let currentSessionId = null;
+
+        // File upload display
+        resumeUpload.addEventListener("change", (e) => {
+          const files = Array.from(e.target.files);
+          fileList.innerHTML = "";
+
+          files.forEach((file, index) => {
+            const fileItem = document.createElement("div");
+            fileItem.className =
+              "text-xs text-gray-600 bg-gray-50 p-2 rounded flex justify-between items-center";
+            fileItem.innerHTML = `
+                        <span>📄 ${file.name}</span>
+                        <span class="text-gray-400">${(
+                          file.size /
+                          1024 /
+                          1024
+                        ).toFixed(2)}MB</span>
+                    `;
+            fileList.appendChild(fileItem);
+          });
+        });
+
+        // Event Listeners
+        processButton.addEventListener("click", handleProcessResumes);
+        modalClose.addEventListener("click", () =>
+          messageModal.classList.add("hidden")
+        );
+
+        async function handleProcessResumes() {
+          console.log("🚀 Starting resume processing..."); // Debug log
+
+          // Validation
+          if (!jobDescription.value.trim()) {
+            showMessage(
+              "❌ Missing Information",
+              "Please provide a job description."
+            );
+            return;
+          }
+          if (resumeUpload.files.length === 0) {
+            showMessage(
+              "❌ Missing Files",
+              "Please upload at least one resume."
+            );
+            return;
+          }
+
+          // Show loading state
+          processButton.disabled = true;
+          processButton.textContent = "Processing...";
+          loader.classList.remove("hidden");
+          candidateReviewPanel.innerHTML = `
+                    <div class="text-center text-blue-600 py-16">
+                        <div class="text-6xl mb-4">🔄</div>
+                        <p class="text-lg">Processing your request...</p>
+                        <p class="text-sm mt-2">This may take a few moments</p>
+                    </div>
+                `;
+          processingStatus.classList.remove("hidden");
+          statusMessage.textContent = `Processing ${resumeUpload.files.length} resume(s)...`;
+
+          // Prepare form data
+          const formData = new FormData();
+          formData.append("job_description", jobDescription.value.trim());
+
+          Array.from(resumeUpload.files).forEach((file) => {
+            console.log(`📎 Adding file: ${file.name} (${file.size} bytes)`);
+            formData.append("files", file);
+          });
+
+          try {
+            console.log("📡 Making API request to /upload-resumes/...");
+
+            // Make API request with timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+            const response = await fetch("/upload-resumes/", {
+              method: "POST",
+              body: formData,
+              signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            console.log(`📡 Response status: ${response.status}`);
+
+            let data;
+            try {
+              data = await response.json();
+              console.log("📦 Response data:", data);
+            } catch (parseError) {
+              console.error("❌ Failed to parse JSON response:", parseError);
+              const responseText = await response.text();
+              console.log("📄 Raw response:", responseText);
+              throw new Error("Server returned invalid JSON response");
+            }
+
+            if (!response.ok) {
+              throw new Error(
+                data.detail || `Server error: ${response.status}`
+              );
+            }
+
+            currentSessionId = data.session_id;
+            statusMessage.textContent = `✅ Successfully processed in ${
+              data.processing_time || "unknown"
+            }s`;
+
+            console.log("✅ Processing complete, displaying results...");
+
+            // Always display results, even if empty
+            displayCandidates(data.results || [], currentSessionId);
+
+            if (data.results && data.results.length > 0) {
+              showMessage(
+                "✅ Processing Complete",
+                `Successfully analyzed ${data.results.length} candidate(s) in ${
+                  data.processing_time || "unknown"
+                } seconds.`
+              );
+            } else {
+              console.log("⚠️ No results found in response");
+              showMessage(
+                "ℹ️ No Matches",
+                "No candidates matched the job requirements. The AI analysis may need different resumes or a revised job description."
+              );
+            }
+          } catch (error) {
+            console.error("❌ Error processing resumes:", error);
+            statusMessage.textContent = "❌ Processing failed";
+
+            let errorMessage = error.message;
+            if (error.name === "AbortError") {
+              errorMessage =
+                "Request timed out. Please try again with fewer files or check your connection.";
+            }
+
+            showMessage(
+              "❌ Processing Error",
+              `Failed to process resumes: ${errorMessage}`
+            );
+            candidateReviewPanel.innerHTML = `
+                        <div class="text-center text-red-500 py-16">
+                            <div class="text-6xl mb-4">⚠️</div>
+                            <p class="text-lg">An error occurred while processing</p>
+                            <p class="text-sm mt-2 max-w-md mx-auto">${errorMessage}</p>
+                            <button onclick="location.reload()" class="mt-4 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition">
+                                🔄 Refresh Page
+                            </button>
+                        </div>
+                    `;
+          } finally {
+            processButton.disabled = false;
+            processButton.textContent = "🤖 Screen & Rank Candidates";
+            loader.classList.add("hidden");
+
+            // Hide status after 5 seconds
+            setTimeout(() => {
+              processingStatus.classList.add("hidden");
+            }, 5000);
+
+            console.log("🏁 Processing function completed");
+          }
+        }
+
+        function displayCandidates(candidates, sessionId) {
+          candidateReviewPanel.innerHTML = "";
+
+          if (candidates && candidates.length > 0) {
+            console.log("Raw candidates data:", candidates); // Debug log
+
+            // Sort candidates by score (highest first) - handle multiple possible score field names
+            const sortedCandidates = [...candidates].sort((a, b) => {
+              const scoreA =
+                a.Score || a.score || a.match_score || a.ranking || 0;
+              const scoreB =
+                b.Score || b.score || b.match_score || b.ranking || 0;
+              return scoreB - scoreA;
+            });
+
+            sortedCandidates.forEach((candidate, index) => {
+              console.log(`Processing candidate ${index}:`, candidate); // Debug log
+
+              const card = document.createElement("div");
+              card.className =
+                "border border-gray-200 p-4 rounded-lg bg-gray-50 card-hover";
+
+              // Extract candidate information with multiple possible field names
+              const name =
+                candidate.Name ||
+                candidate.name ||
+                candidate.candidate_name ||
+                `Candidate ${index + 1}`;
+              const email =
+                candidate.Email ||
+                candidate.email ||
+                candidate.contact_email ||
+                "No email provided";
+              const score =
+                candidate.Score ||
+                candidate.score ||
+                candidate.match_score ||
+                candidate.ranking ||
+                0;
+              const summary =
+                candidate.Summary ||
+                candidate.summary ||
+                candidate.profile_summary ||
+                "No summary available.";
+              const reasoning =
+                candidate.Reasoning ||
+                candidate.reasoning ||
+                candidate.analysis ||
+                candidate.evaluation ||
+                "No analysis provided.";
+
+              const candidateId = name
+                .replace(/\s+/g, "-")
+                .toLowerCase()
+                .replace(/[^a-z0-9\-]/g, "");
+
+              // Score color based on value
+              let scoreColor = "text-gray-600";
+              if (score >= 80) scoreColor = "text-green-600";
+              else if (score >= 60) scoreColor = "text-blue-600";
+              else if (score >= 40) scoreColor = "text-yellow-600";
+              else if (score > 0) scoreColor = "text-red-600";
+
+              card.innerHTML = `
+                            <div class="flex items-start justify-between mb-3">
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-2xl">${
+                                          index === 0
+                                            ? "🥇"
+                                            : index === 1
+                                            ? "🥈"
+                                            : index === 2
+                                            ? "🥉"
+                                            : "👤"
+                                        }</span>
+                                        <div>
+                                            <h3 class="text-lg font-semibold text-gray-900">${name}</h3>
+                                            <p class="text-sm text-gray-600">${email}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="text-center">
+                                    <div class="text-2xl font-bold ${scoreColor}">${
+                typeof score === "number" ? score : parseInt(score) || 0
+              }%</div>
+                                    <div class="text-xs text-gray-500">Match Score</div>
+                                </div>
+                            </div>
+                            
+                            <div class="space-y-3">
+                                <div class="bg-white p-3 rounded-md">
+                                    <p class="text-sm text-gray-800">
+                                        <strong class="text-gray-900">📋 Summary:</strong> 
+                                        ${summary}
+                                    </p>
+                                </div>
+                                
+                                <div class="bg-white p-3 rounded-md">
+                                    <p class="text-sm text-gray-800">
+                                        <strong class="text-gray-900">🤔 AI Analysis:</strong> 
+                                        ${reasoning}
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 pt-4 border-t border-gray-200">
+                                <div id="schedule-form-${candidateId}" class="space-y-3">
+                                    <div class="flex items-center gap-2 mb-2">
+                                        <span class="text-lg">📅</span>
+                                        <p class="text-sm font-medium text-gray-700">Schedule Interview</p>
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3">
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Date</label>
+                                            <input 
+                                                type="date" 
+                                                class="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                                id="date-${candidateId}" 
+                                                min="${
+                                                  new Date()
+                                                    .toISOString()
+                                                    .split("T")[0]
+                                                }"
+                                                required
+                                            >
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs text-gray-600 mb-1">Time</label>
+                                            <input 
+                                                type="time" 
+                                                class="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                                                id="time-${candidateId}" 
+                                                required
+                                            >
+                                        </div>
+                                    </div>
+                                    <button
+                                        class="w-full bg-green-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-green-700 transition transform hover:scale-105 active:scale-95"
+                                        onclick="handleScheduleInterview('${sessionId}', '${name}', '${candidateId}')">
+                                        ✅ Confirm Interview Schedule
+                                    </button>
+                                </div>
+                                
+                                <div id="schedule-result-${candidateId}" class="hidden">
+                                    <div class="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                                        <p class="font-semibold text-green-700 mb-2">✅ Interview Scheduled Successfully!</p>
+                                        <div id="calendar-link-${candidateId}"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+              candidateReviewPanel.appendChild(card);
+            });
+          } else {
+            candidateReviewPanel.innerHTML = `
+                        <div class="text-center text-gray-500 py-16">
+                            <div class="text-6xl mb-4">🔍</div>
+                            <p class="text-lg">No suitable candidates found</p>
+                            <p class="text-sm mt-2">Try adjusting the job requirements or uploading different resumes</p>
+                        </div>
+                    `;
+          }
+        }
+
+        // Global function for scheduling interviews
+        window.handleScheduleInterview = async function (
+          sessionId,
+          candidateName,
+          candidateId
+        ) {
+          const dateInput = document.getElementById(`date-${candidateId}`);
+          const timeInput = document.getElementById(`time-${candidateId}`);
+
+          const interviewDate = dateInput.value;
+          const interviewTime = timeInput.value;
+
+          if (!interviewDate || !interviewTime) {
+            showMessage(
+              "❌ Missing Information",
+              "Please select both a date and time for the interview."
+            );
+            return;
+          }
+
+          // Show loading state
+          const scheduleButton = event.target;
+          const originalText = scheduleButton.textContent;
+          scheduleButton.disabled = true;
+          scheduleButton.textContent = "Scheduling...";
+
+          const formData = new FormData();
+          formData.append("candidate_name", candidateName);
+          formData.append("interview_date", interviewDate);
+          formData.append("interview_time", interviewTime);
+          formData.append("duration", "60"); // Default 60 minutes
+
+          try {
+            const response = await fetch(`/schedule-interview/${sessionId}`, {
+              method: "POST",
+              body: formData,
+            });
+
+            const result = await response.json();
+            if (!response.ok) {
+              throw new Error(result.detail || "Failed to schedule interview.");
+            }
+
+            // Update UI
+            const scheduleForm = document.getElementById(
+              `schedule-form-${candidateId}`
+            );
+            const scheduleResult = document.getElementById(
+              `schedule-result-${candidateId}`
+            );
+            const calendarLink = document.getElementById(
+              `calendar-link-${candidateId}`
+            );
+
+            scheduleForm.classList.add("hidden");
+            scheduleResult.classList.remove("hidden");
+
+            if (result.calendar_link) {
+              calendarLink.innerHTML = `
+                            <a href="${result.calendar_link}" target="_blank" rel="noopener noreferrer" 
+                               class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline transition">
+                                📅 Open in Google Calendar
+                            </a>
+                        `;
+            }
+
+            showMessage(
+              "✅ Interview Scheduled",
+              `Interview with ${candidateName} has been scheduled successfully!`
+            );
+            // Show email sent popup
+            setTimeout(() => {
+              showMessage(
+                "📧 Email Sent",
+                `A confirmation email has been sent to ${candidateName}.`
+              );
+            }, 1200);
+          } catch (error) {
+            console.error("Error scheduling interview:", error);
+            scheduleButton.disabled = false;
+            scheduleButton.textContent = originalText;
+            showMessage(
+              "❌ Scheduling Error",
+              `Failed to schedule interview: ${error.message}`
+            );
+          }
+        };
+
+        function showMessage(title, message) {
+          modalTitle.textContent = title;
+          modalMessage.textContent = message;
+          messageModal.classList.remove("hidden");
+        }
+      });
+    </script>
+  </body>
+</html>
